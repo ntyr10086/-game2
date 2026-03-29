@@ -2,9 +2,9 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>清明除草大挑戰-大山專用</title>
+    <title>清明除草大挑戰</title>
     <style>
-        /* --- 奶油可愛風 CSS --- */
+        /* --- 圓潤可愛 CSS --- */
         :root {
             --bg-color: #fffde7;
             --primary-orange: #ffa000;
@@ -19,41 +19,38 @@
         }
 
         #game-container {
-            background: white; padding: 30px; border-radius: 45px;
+            background: white; padding: 40px; border-radius: 50px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-            text-align: center; width: 620px; border: 10px solid white;
+            text-align: center; width: 600px; border: 12px solid white;
         }
 
-        h1 { color: var(--primary-orange); font-size: 30px; margin-bottom: 10px; }
+        h1 { color: var(--primary-orange); font-size: 32px; margin-bottom: 15px; }
+        
         #story-text { 
             background: #fff8e1; padding: 15px; border-radius: 20px; 
-            color: #795548; font-weight: bold; margin-bottom: 15px;
-            border: 2px dashed #ffcc80;
+            color: #795548; font-weight: bold; margin-bottom: 20px;
+            border: 2px dashed #ffcc80; font-size: 18px;
         }
         
         canvas { 
             border-radius: 30px; background: #fff; 
             box-shadow: inset 0 0 15px rgba(0,0,0,0.05); 
-            border: 5px solid #eee;
-            cursor: crosshair;
+            border: 5px solid #eee; cursor: crosshair;
         }
 
         button {
-            padding: 12px 45px; font-size: 20px; font-weight: bold;
+            padding: 15px 50px; font-size: 22px; font-weight: bold;
             background: linear-gradient(to bottom, #ffcc80, #ffa000);
-            color: white; border: none; border-radius: 35px;
-            cursor: pointer; box-shadow: 0 6px 0 #e65100; transition: 0.1s; margin-top: 15px;
+            color: white; border: none; border-radius: 40px;
+            cursor: pointer; box-shadow: 0 8px 0 #e65100; transition: 0.1s; margin-top: 20px;
         }
         button:active { transform: translateY(4px); box-shadow: 0 2px 0 #e65100; }
 
         #score-board { 
-            margin-top: 15px; font-size: 24px; background: var(--accent-red); 
-            color: white; padding: 10px 45px; border-radius: 50px; 
+            margin-top: 15px; font-size: 26px; background: var(--accent-red); 
+            color: white; padding: 10px 50px; border-radius: 55px; 
             display: inline-block; font-weight: bold; 
         }
-
-        #leaderboard { list-style: none; padding: 0; margin-top: 15px; text-align: left; }
-        #leaderboard li { background: #fafafa; margin: 8px 0; padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; border: 1px solid #eee; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -61,31 +58,26 @@
 <div id="game-container">
     <div id="start-screen">
         <h1>除草大作戰 🌿</h1>
-        <p style="color:#666; font-size: 18px;">墓園長滿雜草了！每次進入都會重置紀錄喔。<br>拿到 20 分就過關！</p>
+        <p style="color:#666; font-size: 18px;">墓園長滿雜草了！快幫忙清理乾淨吧。<br>拿到 20 分就達成任務！</p>
         <button onclick="startGame()">開始拔草</button>
     </div>
 
     <div id="game-stage" style="display:none;">
         <div id="story-text">🌿 點擊「雜草」+2分，誤點「小花」-2分！</div>
-        <canvas id="gameCanvas" width="560" height="400"></canvas>
+        <canvas id="gameCanvas" width="540" height="380"></canvas>
         <br>
         <div id="score-board">✨ 進度: <span id="progress-score">0</span> / 20</div>
     </div>
 
     <div id="end-screen" style="display:none;">
-        <h2 style="color:var(--primary-orange); font-size: 32px;">✨ 除草完成！</h2>
-        <p style="font-size: 20px; font-weight: bold; color: #444;">大山，墓園清理得乾乾淨淨囉！</p>
-        <h3 style="color:#795548;">🏆 本次挑戰紀錄</h3>
-        <ul id="leaderboard"></ul>
+        <h2 style="color:var(--primary-orange); font-size: 36px;">✨ 任務達成！</h2>
+        <p style="font-size: 22px; font-weight: bold; color: #444;">大山，墓園被妳整理得閃閃發亮唷！<br>(｡◕∀◕｡)b</p>
         <button onclick="location.reload()">再玩一次</button>
     </div>
 </div>
 
 <script>
-    // --- ✨ 關鍵：記憶消除術 ---
-    // 每次載入網頁時，直接把舊的紀錄砍掉！
-    localStorage.removeItem("q_weed_record");
-
+    // --- 🔊 音效引擎 ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSfx(f, t, d) {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -98,12 +90,14 @@
         win: () => { playSfx(523, 'sine', 0.1); setTimeout(()=>playSfx(783, 'sine', 0.3), 100); }
     };
 
+    // --- 🎮 遊戲變數 ---
     let levelScore = 0, isGameOver = false, lastPopTime = 0;
     const canvas = document.getElementById("gameCanvas"), ctx = canvas.getContext("2d");
+    
     const holesPos = [
-        {x: 120, y: 100}, {x: 280, y: 100}, {x: 440, y: 100},
-        {x: 120, y: 200}, {x: 280, y: 200}, {x: 440, y: 200},
-        {x: 120, y: 300}, {x: 280, y: 300}, {x: 440, y: 300}
+        {x: 110, y: 90}, {x: 270, y: 90}, {x: 430, y: 90},
+        {x: 110, y: 190}, {x: 270, y: 190}, {x: 430, y: 190},
+        {x: 110, y: 290}, {x: 270, y: 290}, {x: 430, y: 290}
     ];
     let holeStatus = new Array(9).fill(0);
 
@@ -111,6 +105,7 @@
         if(audioCtx.state === 'suspended') audioCtx.resume();
         document.getElementById("start-screen").style.display = "none";
         document.getElementById("game-stage").style.display = "block";
+        
         canvas.onmousedown = e => {
             const r = canvas.getBoundingClientRect(); 
             const mx = e.clientX - r.left, my = e.clientY - r.top;
@@ -133,7 +128,7 @@
 
     function gameLoop() {
         if(isGameOver) return;
-        ctx.fillStyle = "#fffde7"; ctx.fillRect(0,0,560,400);
+        ctx.fillStyle = "#fffde7"; ctx.fillRect(0,0,540,380);
         holesPos.forEach(p => {
             ctx.fillStyle = "#d7ccc8"; ctx.beginPath();
             ctx.ellipse(p.x, p.y + 20, 40, 15, 0, 0, Math.PI * 2); ctx.fill();
@@ -155,21 +150,11 @@
     }
 
     function endGame() {
-        isGameOver = true; sound.win();
+        isGameOver = true;
+        sound.win();
         document.getElementById("game-stage").style.display = "none";
         document.getElementById("end-screen").style.display = "block";
-        saveRecord();
-    }
-
-    function saveRecord() {
-        let history = JSON.parse(localStorage.getItem("q_weed_record")) || [];
-        history.push({ d: new Date().toLocaleTimeString() });
-        localStorage.setItem("q_weed_record", JSON.stringify(history.slice(-5)));
-        let list = "";
-        history.slice(-5).reverse().forEach((e, i) => {
-            list += `<li><span>第 ${history.length - i} 次除草</span><span>✅ 剛剛完成 (${e.d})</span></li>`;
-        });
-        document.getElementById("leaderboard").innerHTML = list;
+        // 這裡完全移除了排行榜存檔與顯示的邏輯
     }
 </script>
 
