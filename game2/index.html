@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>清明除草大挑戰</title>
+    <title>清明除草大挑戰-大山專用</title>
     <style>
         /* --- 奶油可愛風 CSS --- */
         :root {
@@ -61,7 +61,7 @@
 <div id="game-container">
     <div id="start-screen">
         <h1>除草大作戰 🌿</h1>
-        <p style="color:#666; font-size: 18px;">墓園長滿雜草了！快幫忙清理乾淨。<br>拿到 20 分就過關！</p>
+        <p style="color:#666; font-size: 18px;">墓園長滿雜草了！每次進入都會重置紀錄喔。<br>拿到 20 分就過關！</p>
         <button onclick="startGame()">開始拔草</button>
     </div>
 
@@ -74,15 +74,18 @@
 
     <div id="end-screen" style="display:none;">
         <h2 style="color:var(--primary-orange); font-size: 32px;">✨ 除草完成！</h2>
-        <p style="font-size: 20px; font-weight: bold; color: #444;">大山，墓園現在看起來非常整潔唷！</p>
-        <h3 style="color:#795548;">🏆 最近清理紀錄</h3>
+        <p style="font-size: 20px; font-weight: bold; color: #444;">大山，墓園清理得乾乾淨淨囉！</p>
+        <h3 style="color:#795548;">🏆 本次挑戰紀錄</h3>
         <ul id="leaderboard"></ul>
         <button onclick="location.reload()">再玩一次</button>
     </div>
 </div>
 
 <script>
-    // --- 🔊 魔法音效引擎 ---
+    // --- ✨ 關鍵：記憶消除術 ---
+    // 每次載入網頁時，直接把舊的紀錄砍掉！
+    localStorage.removeItem("q_weed_record");
+
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSfx(f, t, d) {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -95,39 +98,26 @@
         win: () => { playSfx(523, 'sine', 0.1); setTimeout(()=>playSfx(783, 'sine', 0.3), 100); }
     };
 
-    // --- 🎮 遊戲變數 ---
     let levelScore = 0, isGameOver = false, lastPopTime = 0;
     const canvas = document.getElementById("gameCanvas"), ctx = canvas.getContext("2d");
-    
-    // 9 個洞穴的位置 (3x3 網格)
     const holesPos = [
         {x: 120, y: 100}, {x: 280, y: 100}, {x: 440, y: 100},
         {x: 120, y: 200}, {x: 280, y: 200}, {x: 440, y: 200},
         {x: 120, y: 300}, {x: 280, y: 300}, {x: 440, y: 300}
     ];
-    let holeStatus = new Array(9).fill(0); // 0=空, 1=雜草🌿, 2=小花🌸
+    let holeStatus = new Array(9).fill(0);
 
     function startGame() {
         if(audioCtx.state === 'suspended') audioCtx.resume();
         document.getElementById("start-screen").style.display = "none";
         document.getElementById("game-stage").style.display = "block";
-        
-        // 點擊事件監測
         canvas.onmousedown = e => {
             const r = canvas.getBoundingClientRect(); 
             const mx = e.clientX - r.left, my = e.clientY - r.top;
-            
             holesPos.forEach((p, i) => {
                 if (Math.abs(mx - p.x) < 50 && Math.abs(my - p.y) < 50) {
-                    if (holeStatus[i] === 1) { // 點到雜草
-                        sound.ok();
-                        levelScore += 2;
-                        holeStatus[i] = 0; 
-                    } else if (holeStatus[i] === 2) { // 誤點小花
-                        sound.no();
-                        levelScore = Math.max(0, levelScore - 2);
-                        holeStatus[i] = 0;
-                    }
+                    if (holeStatus[i] === 1) { sound.ok(); levelScore += 2; holeStatus[i] = 0; }
+                    else if (holeStatus[i] === 2) { sound.no(); levelScore = Math.max(0, levelScore - 2); holeStatus[i] = 0; }
                     document.getElementById("progress-score").innerText = levelScore;
                     if (levelScore >= 20) endGame();
                 }
@@ -137,49 +127,35 @@
     }
 
     function drawEmoji(emoji, x, y, size) {
-        ctx.font = `${size}px serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
+        ctx.font = `${size}px serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.fillText(emoji, x, y);
     }
 
     function gameLoop() {
         if(isGameOver) return;
-
-        // 1. 畫背景
         ctx.fillStyle = "#fffde7"; ctx.fillRect(0,0,560,400);
-        
-        // 2. 畫洞穴 (土堆效果)
         holesPos.forEach(p => {
-            ctx.fillStyle = "#d7ccc8"; 
-            ctx.beginPath();
-            ctx.ellipse(p.x, p.y + 20, 40, 15, 0, 0, Math.PI * 2); 
-            ctx.fill();
+            ctx.fillStyle = "#d7ccc8"; ctx.beginPath();
+            ctx.ellipse(p.x, p.y + 20, 40, 15, 0, 0, Math.PI * 2); ctx.fill();
         });
-
-        // 3. 隨機冒出草或花
         let now = Date.now();
-        if (now - lastPopTime > 700) { // 每 0.7 秒刷新
+        if (now - lastPopTime > 700) {
             let randIdx = Math.floor(Math.random() * 9);
             if (holeStatus[randIdx] === 0) {
-                holeStatus[randIdx] = Math.random() < 0.25 ? 2 : 1; // 25% 花, 75% 草
-                setTimeout(() => { if(!isGameOver) holeStatus[randIdx] = 0; }, 1000); // 1秒後自動縮回去
+                holeStatus[randIdx] = Math.random() < 0.25 ? 2 : 1;
+                setTimeout(() => { if(!isGameOver) holeStatus[randIdx] = 0; }, 1000);
             }
             lastPopTime = now;
         }
-
-        // 4. 畫出 Emoji
         holesPos.forEach((p, i) => {
             if (holeStatus[i] === 1) drawEmoji("🌿", p.x, p.y, 50);
             if (holeStatus[i] === 2) drawEmoji("🌸", p.x, p.y, 45);
         });
-
         requestAnimationFrame(gameLoop);
     }
 
     function endGame() {
-        isGameOver = true;
-        sound.win();
+        isGameOver = true; sound.win();
         document.getElementById("game-stage").style.display = "none";
         document.getElementById("end-screen").style.display = "block";
         saveRecord();
@@ -191,7 +167,7 @@
         localStorage.setItem("q_weed_record", JSON.stringify(history.slice(-5)));
         let list = "";
         history.slice(-5).reverse().forEach((e, i) => {
-            list += `<li><span>第 ${history.length - i} 次清理</span><span>✅ 完成於 ${e.d}</span></li>`;
+            list += `<li><span>第 ${history.length - i} 次除草</span><span>✅ 剛剛完成 (${e.d})</span></li>`;
         });
         document.getElementById("leaderboard").innerHTML = list;
     }
